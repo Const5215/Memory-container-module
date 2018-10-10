@@ -44,8 +44,19 @@
 #include <linux/mutex.h>
 #include <linux/sched.h>
 
+#include <linux/list.h>
 extern struct miscdevice memory_container_dev;
 
+struct container_list_node {
+    struct list_head list;
+    int cid;
+    struct list_head* object_list_head;
+};
+
+struct object_list_node {
+    
+};
+struct list_head* container_list_head;
 
 int memory_container_init(void)
 {
