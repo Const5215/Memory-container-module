@@ -45,6 +45,7 @@
 #include <linux/sched.h>
 
 #include <linux/list.h>
+
 extern struct miscdevice memory_container_dev;
 
 struct container_list_node {
@@ -54,9 +55,19 @@ struct container_list_node {
 };
 
 struct object_list_node {
-    
+    struct list_head list;
+    struct mutex* lock;
+    char* object_location;
+    unsigned long size;
 };
-struct list_head* container_list_head;
+
+struct container_map_node {
+    struct list_head list;
+    int pid;
+    int cid;
+};
+
+struct list_head *container_list_head, *container_map_head;
 
 int memory_container_init(void)
 {
@@ -67,6 +78,11 @@ int memory_container_init(void)
         printk(KERN_ERR "Unable to register \"memory_container\" misc device\n");
         return ret;
     }
+
+    container_list_head = (struct list_head*) kcalloc(1, sizeof(struct list_head), GFP_KERNEL);
+    INIT_LIST_HEAD(container_list_head);
+    container_map_head = (struct list_head*) kcalloc(1, sizeof(struct list_head), GFP_KERNEL);
+    INIT_LIST_HEAD(container_map_head);
 
     printk(KERN_ERR "\"memory_container\" misc device installed\n");
     printk(KERN_ERR "\"memory_container\" version 0.1\n");
