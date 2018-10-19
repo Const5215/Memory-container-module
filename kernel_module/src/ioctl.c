@@ -50,7 +50,7 @@
 struct container_list_node {
     struct list_head list;
     int cid;
-    struct list_head object_list_head, object_lock_head;
+    struct list_head object_list_head;
 };
 
 struct object_list_node {
@@ -90,7 +90,6 @@ struct container_list_node* new_container_init(int new_cid) {
     new_container_node = (struct container_list_node*) kcalloc(1, sizeof(struct container_list_node), GFP_KERNEL);
     new_container_node->cid = new_cid;
     INIT_LIST_HEAD(&new_container_node->object_list_head);
-    INIT_LIST_HEAD(&new_container_node->object_lock_head);
     list_add_tail(&new_container_node->list, container_list_head);
     return new_container_node;
 }
@@ -259,6 +258,9 @@ int memory_container_free(struct memory_container_cmd __user *user_cmd) {
 
     copy_from_user(&user_cmd_oid, &(user_cmd->oid), sizeof(__u64));
     target_object_node = find_object_list(user_cmd_oid);
+    if (target_object_node == NULL) {
+        return 0;
+    }
     kfree(target_object_node->object_location);
     kfree(target_object_node->lock);
     list_del(&target_object_node->list);
