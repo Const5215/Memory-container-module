@@ -102,13 +102,11 @@ int main(int argc, char *argv[])
     // create/link this process to a container.
     cid = getpid() % number_of_containers;
     mcontainer_create(devfd, cid);
-
     // Writing to objects
     for (i = 0; i < number_of_objects; i++)
     {
         mcontainer_lock(devfd, i);
         mapped_data = (char *)mcontainer_alloc(devfd, i, max_size_of_objects);
-
         // error handling
         if (!mapped_data)
         {
@@ -118,7 +116,6 @@ int main(int argc, char *argv[])
 
         // generate a random number to write into the object.
         a = rand() + 1;
-
         // starts to write the data to that address.
         gettimeofday(&current_time, NULL);
         for (j = 0; j < max_size_of_objects_with_buffer - 10; j = strlen(data))
@@ -127,21 +124,21 @@ int main(int argc, char *argv[])
         }
         strncpy(mapped_data, data, max_size_of_objects-1);
         mapped_data[max_size_of_objects-1] = '\0';
-        
         // prints out the result into the log
         fprintf(fp, "S\t%d\t%d\t%ld\t%d\t%d\t%s\n", getpid(), cid, current_time.tv_sec * 1000000 + current_time.tv_usec, i, max_size_of_objects, mapped_data);
         mcontainer_unlock(devfd, i);
         memset(data, 0, max_size_of_objects_with_buffer);
+        //fprintf(stderr, "Insert complete:%d\n", i);
     }
-
     // try delete something
     i = rand() % number_of_objects;
     mcontainer_lock(devfd, i);
+    gettimeofday(&current_time, NULL);
     mcontainer_free(devfd, i);
     fprintf(fp, "D\t%d\t%d\t%ld\t%d\t%d\t%s\n", getpid(), cid, current_time.tv_sec * 1000000 + current_time.tv_usec, i, max_size_of_objects, mapped_data);
     mcontainer_unlock(devfd, i);
-    
-    
+    //fprintf(stderr, "delete complete\n");
+    fprintf(stderr, "pid:%ddone.\n",getpid());
     // done with works, cleanup and wait for other processes.
     mcontainer_delete(devfd);
     close(devfd);

@@ -175,9 +175,10 @@ int memory_container_mmap(struct file *filp, struct vm_area_struct *vma) {
 
     target_object_node = find_object_list(vma->vm_pgoff);
     if (target_object_node == NULL) {
-        //offset invalid, register new one
-        target_object_node = new_object_init(vma->vm_pgoff);
+        //offset invalid
+        //target_object_node = new_object_init(vma->vm_pgoff);
         printk("Offset invalid at:%lu\n", vma->vm_pgoff);
+        return 0;
     }
     if (target_object_node->object_location == NULL) {
         //object location invalid, register new one
@@ -203,8 +204,8 @@ int memory_container_lock(struct memory_container_cmd __user *user_cmd) {
         //offset invalid, register new one
         target_object_node = new_object_init(user_cmd_oid);
     }
+    printk("locking:%lu\n",target_object_node->offset);
     mutex_lock(target_object_node->lock);
-    //printk("locking:%d\n",target_object_node->offset);
     return 0;
 }
 
@@ -219,8 +220,8 @@ int memory_container_unlock(struct memory_container_cmd __user *user_cmd) {
         //offset invalid
         return 0;
     }
+    printk("unlocking:%lu\n",target_object_node->offset);
     mutex_unlock(target_object_node->lock);
-    //printk("unlocking:%d\n",target_object_node->offset);
     return 0;
 }
 
@@ -262,9 +263,8 @@ int memory_container_free(struct memory_container_cmd __user *user_cmd) {
         return 0;
     }
     kfree(target_object_node->object_location);
-    kfree(target_object_node->lock);
-    list_del(&target_object_node->list);
-    kfree(target_object_node);
+    target_object_node->object_location = NULL;
+    printk("freeing:%llu\n", user_cmd_oid);
     return 0;
 }
 
