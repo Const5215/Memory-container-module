@@ -92,5 +92,33 @@ int memory_container_init(void)
 
 void memory_container_exit(void)
 {
+    struct list_head *ci, *tmpci;
+    struct container_list_node *cptr;
+    struct object_list_node *optr;
+    struct list_head *oi, *tmpoi, *o_list_head;
+    struct list_head *mi, *tmpmi;
+    struct container_map_node *mptr;
+    list_for_each_safe(ci, tmpci, container_list_head) {
+        cptr = list_entry(ci, struct container_list_node, list);
+        o_list_head = &cptr->object_list_head;
+        if (o_list_head != NULL) {
+            list_for_each_safe(oi, tmpoi, o_list_head) {
+                optr = list_entry(oi, struct object_list_node, list);
+                if (optr->object_location != NULL) {
+                    kfree(optr->object_location);
+                }
+                kfree(optr->lock);
+                list_del(oi);
+                kfree(optr);
+            }
+        }
+        list_del(ci);
+        kfree(cptr);
+    }
+    list_for_each_safe(mi, tmpmi, container_map_head) {
+        mptr = list_entry(mi, struct container_map_node, list);
+        list_del(mi);
+        kfree(mptr);
+    } 
     misc_deregister(&memory_container_dev);
 }
