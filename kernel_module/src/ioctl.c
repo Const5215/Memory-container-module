@@ -62,6 +62,7 @@ struct object_list_node {
 struct object_lock_node {
     struct list_head list;
     struct mutex lock;
+    unsigned long offset;
 };
 
 struct container_map_node {
@@ -224,16 +225,16 @@ int memory_container_mmap(struct file *filp, struct vm_area_struct *vma) {
 
 int memory_container_lock(struct memory_container_cmd __user *user_cmd) {
     __u64 user_cmd_oid;
-    struct object_list_node *target_object_lock;
+    struct object_lock_node *target_lock_node;
 
     copy_from_user(&user_cmd_oid, &(user_cmd->oid), sizeof(__u64));
-    target_object_lock = find_object_lock(user_cmd_oid);
-    if (target_object_lock == NULL) {
+    target_lock_node = find_object_lock(user_cmd_oid);
+    if (target_lock_node == NULL) {
         //offset invalid, register new one
-        target_object_lock = new_lock_init(user_cmd_oid);
+        target_lock_node = new_lock_init(user_cmd_oid);
     }
-    printk("locking:%lu\n",target_object_lock->offset);
-    mutex_lock(&target_object_lock->lock);
+    printk("locking:%lu\n",target_lock_node->offset);
+    mutex_lock(&target_lock_node->lock);
     return 0;
 }
 
@@ -244,12 +245,12 @@ int memory_container_unlock(struct memory_container_cmd __user *user_cmd) {
 
     copy_from_user(&user_cmd_oid, &(user_cmd->oid), sizeof(__u64));
     target_lock_node = find_object_lock(user_cmd_oid);
-    if (target_object_node == NULL) {
+    if (target_lock_node == NULL) {
         //offset invalid
         return 0;
     }
-    printk("unlocking:%lu\n",target_object_lock->offset);
-    mutex_unlock(&target_object_lock->lock);
+    printk("unlocking:%lu\n",target_lock_node->offset);
+    mutex_unlock(&target_lock_node->lock);
     return 0;
 }
 
