@@ -82,13 +82,10 @@ struct object_list_node* find_object_list(unsigned long offset);
 struct object_lock_node* find_object_lock(unsigned long offset);
 int find_cid(void);
 int memory_container_mmap(struct file *filp, struct vm_area_struct *vma);
-//tbc
 int memory_container_lock(struct memory_container_cmd __user *user_cmd);
-//tbc
 int memory_container_unlock(struct memory_container_cmd __user *user_cmd);
 int memory_container_create(struct memory_container_cmd __user *user_cmd);
 int memory_container_delete(struct memory_container_cmd __user *user_cmd);
-//tbc
 int memory_container_free(struct memory_container_cmd __user *user_cmd);
 
 struct container_list_node* new_container_init(int new_cid) {
