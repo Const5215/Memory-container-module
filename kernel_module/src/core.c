@@ -56,14 +56,14 @@ struct container_list_node {
 
 struct object_list_node {
     struct list_head list;
-    struct mutex* lock;
     char* object_location;
-    unsigned long size;
+    unsigned long offset, size;
 };
 
 struct object_lock_node {
     struct list_head list;
     struct mutex lock;
+	unsigned long offset;
 };
 
 struct container_map_node {
@@ -121,7 +121,6 @@ void memory_container_exit(void)
         if (o_lock_head != NULL) {
             list_for_each_safe(oi, tmpoi, o_lock_head) {
                 lptr = list_entry(oi, struct object_lock_node, list);
-                kfree(optr->lock);
                 list_del(oi);
                 kfree(lptr);
             }

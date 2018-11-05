@@ -123,6 +123,7 @@ struct object_lock_node* new_lock_init(unsigned long new_offset) {
     struct object_lock_node* new_lock_node;
     object_lock_head = &find_container_list()->object_lock_head;
     new_lock_node = (struct object_lock_node*) kcalloc(1, sizeof(struct object_lock_node), GFP_KERNEL);
+    new_lock_node->offset = new_offset;
     mutex_init(&new_lock_node->lock);
     list_add_tail(&new_lock_node->list, object_lock_head);
     return new_lock_node;
