@@ -50,14 +50,18 @@
 struct container_list_node {
     struct list_head list;
     int cid;
-    struct list_head object_list_head;
+    struct list_head object_list_head, object_lock_head;
 };
 
 struct object_list_node {
     struct list_head list;
     char *object_location;
-    struct mutex *lock;
     unsigned long offset, size;
+};
+
+struct object_lock_node {
+    struct list_head list;
+    struct mutex lock;
 };
 
 struct container_map_node {
@@ -71,9 +75,11 @@ extern struct list_head *container_list_head, *container_map_head;
 struct container_list_node* new_container_init(int new_cid);
 struct container_map_node* new_mapping_init(int new_pid, int new_cid);
 struct object_list_node* new_object_init(unsigned long new_offset);
+struct object_lock_node* new_lock_init(unsigned long new_offset);
 struct container_list_node* find_container_list(void);
 struct container_map_node* find_container_map(void);
 struct object_list_node* find_object_list(unsigned long offset);
+struct object_lock_node* find_object_lock(unsigned long offset);
 int find_cid(void);
 int memory_container_mmap(struct file *filp, struct vm_area_struct *vma);
 //tbc
@@ -90,6 +96,7 @@ struct container_list_node* new_container_init(int new_cid) {
     new_container_node = (struct container_list_node*) kcalloc(1, sizeof(struct container_list_node), GFP_KERNEL);
     new_container_node->cid = new_cid;
     INIT_LIST_HEAD(&new_container_node->object_list_head);
+    INIT_LIST_HEAD(&new_container_node->object_lock_head);
     list_add_tail(&new_container_node->list, container_list_head);
     return new_container_node;
 }
@@ -109,10 +116,18 @@ struct object_list_node* new_object_init(unsigned long new_offset) {
     object_list_head = &find_container_list()->object_list_head;
     new_object_node = (struct object_list_node*) kcalloc(1, sizeof(struct object_list_node), GFP_KERNEL);
     new_object_node->offset = new_offset;
-    new_object_node->lock = (struct mutex *) kcalloc(1, sizeof(struct mutex), GFP_KERNEL);
-    mutex_init(new_object_node->lock);
     list_add_tail(&new_object_node->list, object_list_head);
     return new_object_node;
+}
+
+struct object_lock_node* new_lock_init(unsigned long new_offset) {
+    struct list_head* object_lock_head;
+    struct object_lock_node* new_lock_node;
+    object_lock_head = &find_container_list()->object_lock_head;
+    new_lock_node = (struct object_lock_node*) kcalloc(1, sizeof(struct object_lock_node), GFP_KERNEL);
+    mutex_init(&new_lock_node->lock);
+    list_add_tail(&new_lock_node->list, object_lock_head);
+    return new_lock_node;
 }
 
 struct container_list_node* find_container_list() {
@@ -157,6 +172,22 @@ struct object_list_node* find_object_list(unsigned long offset) {
     return NULL;
 }
 
+struct object_lock_node* find_object_lock(unsigned long offset) {
+    struct container_list_node *target_container_node;
+    struct object_lock_node *object_lock_entry;
+    struct list_head *object_lock_ptr, *object_lock_head;
+
+    target_container_node = find_container_list();
+    object_lock_head = &target_container_node->object_lock_head;
+    for (object_lock_ptr = object_lock_head->next; object_lock_ptr != object_lock_head; object_lock_ptr = object_lock_ptr->next) {
+        object_lock_entry = list_entry(object_lock_ptr, struct object_lock_node, list);
+        if (object_lock_entry->offset == offset) {
+            return object_lock_entry;
+        }
+    }
+    return NULL;
+}
+
 int find_cid() {
     struct container_map_node* target_container_map;
     target_container_map = find_container_map();
@@ -176,17 +207,17 @@ int memory_container_mmap(struct file *filp, struct vm_area_struct *vma) {
     target_object_node = find_object_list(vma->vm_pgoff);
     if (target_object_node == NULL) {
         //offset invalid
-        //target_object_node = new_object_init(vma->vm_pgoff);
-        printk("Offset invalid at:%lu\n", vma->vm_pgoff);
-        return 0;
+        target_object_node = new_object_init(vma->vm_pgoff);
+        //printk("Offset invalid at:%lu\n", vma->vm_pgoff);
+        //return 0;
     }
     if (target_object_node->object_location == NULL) {
         //object location invalid, register new one
         target_object_node->object_location = (char *) kcalloc(1, (vma->vm_end - vma->vm_start)*sizeof(char), GFP_KERNEL);
     }
-    else {
-        printk("existing area found:%lu\n", vma->vm_pgoff);
-    }
+    //else {
+        //printk("existing area found:%lu\n", vma->vm_pgoff);
+    //}
     pfn_start = virt_to_phys(target_object_node->object_location) >> PAGE_SHIFT;
     remap_pfn_range(vma, vma->vm_start, pfn_start, vma->vm_end - vma->vm_start, vma->vm_page_prot);
     //printk("mapping:%dsize:%d\n",target_object_node->offset,vma->vm_end - vma->vm_start);
@@ -196,32 +227,32 @@ int memory_container_mmap(struct file *filp, struct vm_area_struct *vma) {
 
 int memory_container_lock(struct memory_container_cmd __user *user_cmd) {
     __u64 user_cmd_oid;
-    struct object_list_node *target_object_node;
+    struct object_list_node *target_object_lock;
 
     copy_from_user(&user_cmd_oid, &(user_cmd->oid), sizeof(__u64));
-    target_object_node = find_object_list(user_cmd_oid);
-    if (target_object_node == NULL) {
+    target_object_lock = find_object_lock(user_cmd_oid);
+    if (target_object_lock == NULL) {
         //offset invalid, register new one
-        target_object_node = new_object_init(user_cmd_oid);
+        target_object_lock = new_lock_init(user_cmd_oid);
     }
-    printk("locking:%lu\n",target_object_node->offset);
-    mutex_lock(target_object_node->lock);
+    printk("locking:%lu\n",target_object_lock->offset);
+    mutex_lock(&target_object_lock->lock);
     return 0;
 }
 
 
 int memory_container_unlock(struct memory_container_cmd __user *user_cmd) {
     __u64 user_cmd_oid;
-    struct object_list_node *target_object_node;
+    struct object_lock_node *target_lock_node;
 
     copy_from_user(&user_cmd_oid, &(user_cmd->oid), sizeof(__u64));
-    target_object_node = find_object_list(user_cmd_oid);
+    target_lock_node = find_object_lock(user_cmd_oid);
     if (target_object_node == NULL) {
         //offset invalid
         return 0;
     }
-    printk("unlocking:%lu\n",target_object_node->offset);
-    mutex_unlock(target_object_node->lock);
+    printk("unlocking:%lu\n",target_object_lock->offset);
+    mutex_unlock(&target_object_lock->lock);
     return 0;
 }
 

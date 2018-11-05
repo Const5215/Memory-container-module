@@ -61,6 +61,11 @@ struct object_list_node {
     unsigned long size;
 };
 
+struct object_lock_node {
+    struct list_head list;
+    struct mutex lock;
+};
+
 struct container_map_node {
     struct list_head list;
     int pid;
@@ -95,21 +100,30 @@ void memory_container_exit(void)
     struct list_head *ci, *tmpci;
     struct container_list_node *cptr;
     struct object_list_node *optr;
-    struct list_head *oi, *tmpoi, *o_list_head;
+    struct object_lock_node *lptr;
+    struct list_head *oi, *tmpoi, *o_list_head, *o_lock_head;
     struct list_head *mi, *tmpmi;
     struct container_map_node *mptr;
     list_for_each_safe(ci, tmpci, container_list_head) {
         cptr = list_entry(ci, struct container_list_node, list);
         o_list_head = &cptr->object_list_head;
+        o_lock_head = &cptr->object_lock_head;
         if (o_list_head != NULL) {
             list_for_each_safe(oi, tmpoi, o_list_head) {
                 optr = list_entry(oi, struct object_list_node, list);
                 if (optr->object_location != NULL) {
                     kfree(optr->object_location);
                 }
-                kfree(optr->lock);
                 list_del(oi);
                 kfree(optr);
+            }
+        }
+        if (o_lock_head != NULL) {
+            list_for_each_safe(oi, tmpoi, o_lock_head) {
+                lptr = list_entry(oi, struct object_lock_node, list);
+                kfree(optr->lock);
+                list_del(oi);
+                kfree(lptr);
             }
         }
         list_del(ci);
