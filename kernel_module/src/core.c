@@ -51,7 +51,7 @@ extern struct miscdevice memory_container_dev;
 struct container_list_node {
     struct list_head list;
     int cid;
-    struct list_head* object_list_head;
+    struct list_head* object_list_head, object_lock_head;
 };
 
 struct object_list_node {
@@ -106,8 +106,8 @@ void memory_container_exit(void)
     struct container_map_node *mptr;
     list_for_each_safe(ci, tmpci, container_list_head) {
         cptr = list_entry(ci, struct container_list_node, list);
-        o_list_head = &cptr->object_list_head;
-        o_lock_head = &cptr->object_lock_head;
+        o_list_head = cptr->object_list_head;
+        o_lock_head = cptr->object_lock_head;
         if (o_list_head != NULL) {
             list_for_each_safe(oi, tmpoi, o_list_head) {
                 optr = list_entry(oi, struct object_list_node, list);
