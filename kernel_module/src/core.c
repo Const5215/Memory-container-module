@@ -73,7 +73,7 @@ struct container_map_node {
 };
 
 struct list_head *container_list_head, *container_map_head;
-
+struct mutex* lock_assign_mutex;
 int memory_container_init(void)
 {
     int ret;
@@ -88,6 +88,8 @@ int memory_container_init(void)
     INIT_LIST_HEAD(container_list_head);
     container_map_head = (struct list_head*) kcalloc(1, sizeof(struct list_head), GFP_KERNEL);
     INIT_LIST_HEAD(container_map_head);
+    lock_assign_mutex = (struct mutex*) kcalloc(1, sizeof(struct mutex), GFP_KERNEL);
+    mutex_init(lock_assign_mutex);
 
     printk(KERN_ERR "\"memory_container\" misc device installed\n");
     printk(KERN_ERR "\"memory_container\" version 0.1\n");
@@ -104,6 +106,7 @@ void memory_container_exit(void)
     struct list_head *oi, *tmpoi, *o_list_head, *o_lock_head;
     struct list_head *mi, *tmpmi;
     struct container_map_node *mptr;
+    kfree(lock_assign_mutex);
     list_for_each_safe(ci, tmpci, container_list_head) {
         cptr = list_entry(ci, struct container_list_node, list);
         o_list_head = &cptr->object_list_head;

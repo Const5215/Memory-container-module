@@ -72,6 +72,7 @@ struct container_map_node {
 };
 
 extern struct list_head *container_list_head, *container_map_head;
+extern struct mutex* lock_assign_mutex;
 
 struct container_list_node* new_container_init(int new_cid);
 struct container_map_node* new_mapping_init(int new_pid, int new_cid);
@@ -228,8 +229,9 @@ int memory_container_mmap(struct file *filp, struct vm_area_struct *vma) {
 int memory_container_lock(struct memory_container_cmd __user *user_cmd) {
     __u64 user_cmd_oid;
     struct object_lock_node *target_lock_node;
-
     copy_from_user(&user_cmd_oid, &(user_cmd->oid), sizeof(__u64));
+    
+    mutex_lock(lock_assign_mutex);
     target_lock_node = find_object_lock(user_cmd_oid);
     if (target_lock_node == NULL) {
         //offset invalid, register new one
@@ -237,6 +239,8 @@ int memory_container_lock(struct memory_container_cmd __user *user_cmd) {
     }
     //printk("locking:%lu\n",target_lock_node->offset);
     mutex_lock(&target_lock_node->lock);
+    mutex_unlock(lock_assign_mutex);
+
     return 0;
 }
 
@@ -244,8 +248,9 @@ int memory_container_lock(struct memory_container_cmd __user *user_cmd) {
 int memory_container_unlock(struct memory_container_cmd __user *user_cmd) {
     __u64 user_cmd_oid;
     struct object_lock_node *target_lock_node;
-
     copy_from_user(&user_cmd_oid, &(user_cmd->oid), sizeof(__u64));
+
+    mutex_lock(lock_assign_mutex);
     target_lock_node = find_object_lock(user_cmd_oid);
     if (target_lock_node == NULL) {
         //offset invalid
@@ -253,6 +258,7 @@ int memory_container_unlock(struct memory_container_cmd __user *user_cmd) {
     }
     //printk("unlocking:%lu\n",target_lock_node->offset);
     mutex_unlock(&target_lock_node->lock);
+    mutex_unlock(lock_assign_mutex);
     return 0;
 }
 
