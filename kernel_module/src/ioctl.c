@@ -72,7 +72,7 @@ struct container_map_node {
 };
 
 extern struct list_head *container_list_head, *container_map_head;
-extern struct mutex* lock_assign_mutex;
+extern struct mutex *lock_assign_mutex, *container_assign_mutex;
 
 struct container_list_node* new_container_init(int new_cid);
 struct container_map_node* new_mapping_init(int new_pid, int new_cid);
@@ -192,7 +192,7 @@ struct object_lock_node* find_object_lock(unsigned long offset) {
 int find_cid() {
     struct container_map_node* target_container_map;
     target_container_map = find_container_map();
-    if (find_container_map() != NULL) {
+    if (target_container_map != NULL) {
         return target_container_map->cid;
     }
     else {
@@ -279,9 +279,13 @@ int memory_container_create(struct memory_container_cmd __user *user_cmd) {
 
     copy_from_user(&user_cmd_cid, &(user_cmd->cid), sizeof(__u64));
     target_container_map = find_container_map();
+    
+    mutex_lock(container_assign_mutex);
     if (find_container_list() == NULL) {
         new_container_init(user_cmd_cid);
     }
+    mutex_unlock(container_assign_mutex);
+
     if (target_container_map == NULL) {    
         new_mapping_init(current->pid, user_cmd_cid);
     }
