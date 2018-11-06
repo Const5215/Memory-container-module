@@ -254,6 +254,7 @@ int memory_container_unlock(struct memory_container_cmd __user *user_cmd) {
     target_lock_node = find_object_lock(user_cmd_oid);
     if (target_lock_node == NULL) {
         //offset invalid
+	mutex_unlock(lock_assign_mutex);
         return 0;
     }
     //printk("unlocking:%lu\n",target_lock_node->offset);
