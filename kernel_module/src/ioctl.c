@@ -237,9 +237,9 @@ int memory_container_lock(struct memory_container_cmd __user *user_cmd) {
         //offset invalid, register new one
         target_lock_node = new_lock_init(user_cmd_oid);
     }
+    mutex_unlock(lock_assign_mutex);
     //printk("locking:%lu\n",target_lock_node->offset);
     mutex_lock(&target_lock_node->lock);
-    mutex_unlock(lock_assign_mutex);
 
     return 0;
 }
@@ -254,12 +254,12 @@ int memory_container_unlock(struct memory_container_cmd __user *user_cmd) {
     target_lock_node = find_object_lock(user_cmd_oid);
     if (target_lock_node == NULL) {
         //offset invalid
-	mutex_unlock(lock_assign_mutex);
+	    mutex_unlock(lock_assign_mutex);
         return 0;
     }
+    mutex_unlock(lock_assign_mutex);
     //printk("unlocking:%lu\n",target_lock_node->offset);
     mutex_unlock(&target_lock_node->lock);
-    mutex_unlock(lock_assign_mutex);
     return 0;
 }
 
