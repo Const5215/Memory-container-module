@@ -140,6 +140,7 @@ struct container_list_node* find_container_list() {
         }
     }
     //no corresponding container
+    printk("Not found cid:%d", target_cid);
     return NULL;
 }
 
@@ -234,7 +235,7 @@ int memory_container_lock(struct memory_container_cmd __user *user_cmd) {
         //offset invalid, register new one
         target_lock_node = new_lock_init(user_cmd_oid);
     }
-    printk("locking:%lu\n",target_lock_node->offset);
+    //printk("locking:%lu\n",target_lock_node->offset);
     mutex_lock(&target_lock_node->lock);
     return 0;
 }
@@ -250,7 +251,7 @@ int memory_container_unlock(struct memory_container_cmd __user *user_cmd) {
         //offset invalid
         return 0;
     }
-    printk("unlocking:%lu\n",target_lock_node->offset);
+    //printk("unlocking:%lu\n",target_lock_node->offset);
     mutex_unlock(&target_lock_node->lock);
     return 0;
 }
@@ -294,7 +295,7 @@ int memory_container_free(struct memory_container_cmd __user *user_cmd) {
     }
     kfree(target_object_node->object_location);
     target_object_node->object_location = NULL;
-    printk("freeing:%llu\n", user_cmd_oid);
+    //printk("freeing:%llu\n", user_cmd_oid);
     return 0;
 }
 
